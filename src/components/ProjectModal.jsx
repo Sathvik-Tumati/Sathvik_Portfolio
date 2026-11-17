@@ -1,206 +1,117 @@
 import { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { IconBrandGithub, IconExternalLink, IconX } from '@tabler/icons-react';
-import ProjectVisual from './ProjectVisual';
-import './ProjectModal.css';
+import ProjectMedia from './ProjectMedia';
+import { projects } from '../data/projects';
 
-export default function ProjectModal({ project, isOpen, onClose }) {
-  const modalRef = useRef(null);
-  const triggerRef = useRef(null);
+const pad = (n) => String(n).padStart(2, '0');
 
-  // Focus trap + ESC close
+// Case study in a native <dialog> sheet: focus trap, Esc and backdrop come from the platform.
+export default function ProjectModal({ project, onClose, onOpen }) {
+  const ref = useRef(null);
+
   useEffect(() => {
-    if (!isOpen) return;
+    const dialog = ref.current;
+    if (project && !dialog.open) dialog.showModal();
+    if (project) dialog.scrollTop = 0;
+    if (!project && dialog.open) dialog.close();
+  }, [project]);
 
-    triggerRef.current = document.activeElement;
-    const timer = setTimeout(() => modalRef.current?.focus(), 100);
+  const i = project ? projects.indexOf(project) : -1;
+  const next = projects[(i + 1) % projects.length];
 
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
-      // Focus trap
-      if (e.key === 'Tab' && modalRef.current) {
-        const focusable = modalRef.current.querySelectorAll(
-          'a, button, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-      clearTimeout(timer);
-      triggerRef.current?.focus();
-    };
-  }, [isOpen, onClose]);
-
-  if (!project) return null;
-
-  const hasLive = project.liveUrl && project.liveUrl.length > 0;
-
-  // Highlight the key phrase in whyBuilt
-  const renderWhyBuilt = () => {
-    if (!project.whyBuiltHighlight) return project.whyBuilt;
-    const parts = project.whyBuilt.split(project.whyBuiltHighlight);
-    if (parts.length < 2) return project.whyBuilt;
+  const whyBuilt = () => {
+    const [before, after] = project.whyBuilt.split(project.whyBuiltHighlight);
+    if (after === undefined) return project.whyBuilt;
     return (
       <>
-        {parts[0]}
-        <em className="amber-italic">{project.whyBuiltHighlight}</em>
-        {parts[1]}
+        {before}
+        <mark>{project.whyBuiltHighlight}</mark>
+        {after}
       </>
     );
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="modal-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          onClick={onClose}
-        >
-          <motion.div
-            ref={modalRef}
-            className="modal"
-            tabIndex={-1}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${project.name} case study`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button className="modal__close" onClick={onClose} aria-label="Close modal">
-              <IconX size={20} stroke={1.5} />
+    <dialog ref={ref} className="cs" onClose={onClose} onClick={(e) => e.target === ref.current && onClose()} aria-labelledby="cs-title">
+      {project && (
+        <article className="cs__in" key={project.id}>
+          <div className="cs__bar">
+            <span className="label">
+              Case study {pad(i + 1)} / {pad(projects.length)}
+            </span>
+            <button className="cs__close" onClick={onClose} aria-label="Close case study">
+              Close <kbd>esc</kbd>
             </button>
+          </div>
 
-            {/* 01 HERO */}
-            <div className="modal__hero" style={{ background: project.heroTint }}>
-              {hasLive ? (
-                <a
-                  href={project.liveUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="modal__status-pill modal__status-pill--live"
-                >
-                  LIVE ↗
-                </a>
-              ) : (
-                <span className="modal__status-pill modal__status-pill--dev">
-                  IN DEVELOPMENT
-                </span>
-              )}
-              <div className="modal__hero-tags">
-                {project.tags.map((tag) => (
-                  <span key={tag}>{tag}</span>
-                ))}
+          <header className="cs__head">
+            <p className="label label--signal">{project.liveUrl ? '● Live' : project.status}</p>
+            <h2 id="cs-title">{project.name}</h2>
+            <p className="cs__thesis">{project.thesis}</p>
+          </header>
+
+          <figure className="frame">
+            <ProjectMedia project={project} />
+          </figure>
+
+          <dl className="cs__meta">
+            <div>
+              <dt className="label">Result</dt>
+              <dd className="signal">{project.result}</dd>
+            </div>
+            <div>
+              <dt className="label">Stack</dt>
+              <dd className="mono">{project.tech.join(' · ')}</dd>
+            </div>
+            {(project.liveUrl || project.githubUrl) && (
+              <div>
+                <dt className="label">Links</dt>
+                <dd className="cs__links">
+                  {project.liveUrl && <a href={project.liveUrl} target="_blank" rel="noopener noreferrer">Live app ↗</a>}
+                  {project.githubUrl && <a href={project.githubUrl} target="_blank" rel="noopener noreferrer">Source ↗</a>}
+                </dd>
               </div>
-              <h2 className="modal__hero-name">{project.name}</h2>
-              <p className="modal__hero-thesis">{project.thesis}</p>
-            </div>
+            )}
+          </dl>
 
-            {/* 02 VISUAL */}
-            <div className="modal__visual">
-              <ProjectVisual visType={project.visType} size="large" />
-            </div>
+          <section className="cs__sec">
+            <h3 className="label">Problem</h3>
+            <p>{project.problem}</p>
+          </section>
+          <section className="cs__sec">
+            <h3 className="label">Why I built it</h3>
+            <p>{whyBuilt()}</p>
+          </section>
+          <section className="cs__sec">
+            <h3 className="label">Pipeline</h3>
+            <ol className="flow">
+              {project.architecture.split(' → ').map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          </section>
+          <section className="cs__sec">
+            <h3 className="label">What it does</h3>
+            <ul className="ticks">
+              {project.features.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+          </section>
+          <section className="cs__sec">
+            <h3 className="label">What was hard</h3>
+            <p>{project.challenges}</p>
+          </section>
+          <section className="cs__sec cs__sec--quote">
+            <h3 className="label">Takeaway</h3>
+            <blockquote>{project.learned}</blockquote>
+          </section>
 
-            {/* 03 PROBLEM */}
-            <div className="modal__section">
-              <span className="label-mono-sm">THE PROBLEM</span>
-              <p className="modal__body">{project.problem}</p>
-            </div>
-
-            {/* 04 WHY I BUILT IT */}
-            <div className="modal__section">
-              <span className="label-mono-sm">WHY I BUILT THIS</span>
-              <p className="modal__body">{renderWhyBuilt()}</p>
-            </div>
-
-            {/* 05 ARCHITECTURE */}
-            <div className="modal__section">
-              <span className="label-mono-sm">HOW IT WORKS</span>
-              <p className="modal__body modal__body--sm">{project.architecture}</p>
-            </div>
-
-            {/* 06 TECH STACK */}
-            <div className="modal__section">
-              <span className="label-mono-sm">BUILT WITH</span>
-              <div className="modal__tech">
-                {project.tech.map((t) => (
-                  <span key={t} className="tech-pill">{t}</span>
-                ))}
-              </div>
-            </div>
-
-            {/* 07 KEY FEATURES */}
-            <div className="modal__section">
-              <span className="label-mono-sm">KEY FEATURES</span>
-              <ul className="modal__features">
-                {project.features.map((f, i) => (
-                  <li key={i}>
-                    <span className="modal__arrow">→</span> {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* 08 CHALLENGES */}
-            <div className="modal__section">
-              <span className="label-mono-sm">WHAT WAS HARD</span>
-              <p className="modal__body">{project.challenges}</p>
-            </div>
-
-            {/* 09 TAKEAWAY */}
-            <div className="modal__section">
-              <span className="label-mono-sm">TAKEAWAY</span>
-              <p className="modal__body modal__body--italic">{project.learned}</p>
-            </div>
-
-            {/* 10 LINKS */}
-            <div className="modal__section modal__links">
-              <a
-                href={project.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-ghost"
-              >
-                <IconBrandGithub size={16} stroke={1.5} />
-                View on GitHub
-              </a>
-              {hasLive && (
-                <a
-                  href={project.liveUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-ghost"
-                >
-                  <IconExternalLink size={16} stroke={1.5} />
-                  View Live Demo ↗
-                </a>
-              )}
-            </div>
-          </motion.div>
-        </motion.div>
+          <button className="cs__next" onClick={() => onOpen(next)}>
+            <span className="label">Next case study</span>
+            <span className="cs__next-name">{next.name} →</span>
+          </button>
+        </article>
       )}
-    </AnimatePresence>
+    </dialog>
   );
 }

@@ -1,16 +1,33 @@
-# React + Vite
+# Sathvik Tumati — Portfolio
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Single-page portfolio: React 19 + Vite, plain CSS in `src/index.css`, no router or animation library.
+The visual system is documented in `DESIGN.md`; read it before changing how anything looks. Live at
+https://sathvik-portfolio-mu.vercel.app.
 
-Currently, two official plugins are available:
+## Develop
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev                  # local dev server
+npm run lint
+npm run build                # production build in dist/
+node src/lib/mlp.check.mjs   # the network still learns, the contour tracer still works
+```
 
-## React Compiler
+## Content
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `src/data/projects.js` — every project and case study. The first three are the large entries in
+  Selected work; the rest form the index. `tech` also drives the Stack matrix. A case study can be
+  linked directly: `/#civicpulse` (the older `/projects#civicpulse` still works).
+- `src/data/experience.js` — the career log.
+- `src/App.jsx` — the whole page, section by section (`#about`, `#work`, `#lab`, `#stack`, `#career`, `#contact`).
+- `src/components/Field.jsx` — the hero landscape and the Lab, built on `src/lib/mlp.js` (hand-written
+  network) and `src/lib/contours.js` (marching squares).
+- `src/components/ProjectModal.jsx` — the case-study sheet. `ProjectMedia.jsx` draws a diagram when a
+  project has no screenshot.
+- `resume/resume.md` — résumé source. `sh resume/build.sh` rebuilds the PDF and copies it to `public/`.
 
-## Expanding the ESLint configuration
+## Deploy
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Vercel, framework preset "Vite". `vercel.json` rewrites every path to `index.html`, so old page
+URLs reach the app and are redirected to their sections. Pushing to `main` deploys.
